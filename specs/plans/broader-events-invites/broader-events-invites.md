@@ -267,7 +267,7 @@ and the `Aniversário de {person}` summary plus the
 Small: `_show_card` checks `event.is_event_invite` (`handlers.py:82`),
 `on_force` flips `is_event_invite` (`handlers.py:231`), the "falta o horário"
 guard in `on_confirm` (`handlers.py:192-197`) becomes "Ainda falta a data",
-and the ✏️ examples broaden to e.g. "é dia 22/03", "é o casamento da Bia",
+and the ✏️ examples broaden to e.g. "é dia 22/03", "é o casamento da Fulana",
 "o endereço é Rua X, 100". `can_create=event.start_dt() is not None` still
 holds — an all-day event has a `start`.
 

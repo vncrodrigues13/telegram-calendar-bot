@@ -328,7 +328,7 @@ async def test_edit_then_correction_reextracts_and_rerenders(
 ) -> None:
     # The pending row is seeded directly, so the only extraction call in this
     # test is the re-extraction triggered by the correction.
-    corrected = invite.model_copy(update={"person": "Bia"})
+    corrected = invite.model_copy(update={"person": "Fulana"})
     provider = FakeProvider(corrected)
     context = make_context(settings, store, provider, FakeCalendar())
     pending_id = await store.add_pending(7, "niver da Ana", None, invite)
@@ -340,16 +340,16 @@ async def test_edit_then_correction_reextracts_and_rerenders(
 
     # ...and the next message is routed to the correction prompt, not treated
     # as a brand-new invite.
-    correction = FakeMessage(text="na verdade é da Bia")
+    correction = FakeMessage(text="na verdade é da Fulana")
     await handlers.on_message(make_update(message=correction), context)
 
     card_text, _ = correction.replies[0].last_edit
-    assert "Bia" in card_text
+    assert "Fulana" in card_text
     assert handlers.EDITING_KEY not in context.user_data
-    assert "na verdade é da Bia" in provider.calls[-1][1]
+    assert "na verdade é da Fulana" in provider.calls[-1][1]
 
     pending = await store.get_pending(pending_id)
-    assert pending is not None and pending.extraction.person == "Bia"
+    assert pending is not None and pending.extraction.person == "Fulana"
     # Only one pending row exists — the correction did not create a second.
     assert await store.get_pending(pending_id + 1) is None
 
@@ -674,7 +674,7 @@ async def test_edit_then_captionless_photo_keeps_editing_state(
 async def test_edit_then_captioned_photo_applies_the_caption_as_correction(
     settings: Settings, store: Store, invite: ExtractedEvent
 ) -> None:
-    corrected = invite.model_copy(update={"person": "Bia"})
+    corrected = invite.model_copy(update={"person": "Fulana"})
     provider = FakeProvider(corrected)
     context = make_context(settings, store, provider, FakeCalendar())
     pending_id = await store.add_pending(7, "niver da Ana", None, invite)
@@ -683,13 +683,13 @@ async def test_edit_then_captioned_photo_applies_the_caption_as_correction(
     await handlers.on_edit(make_update(query=query), context)
 
     photo = FakePhotoSize(file_unique_id="photo123")
-    message = FakeMessage(photo=(photo,), caption="na verdade é da Bia")
+    message = FakeMessage(photo=(photo,), caption="na verdade é da Fulana")
     await handlers.on_message(make_update(message=message), context)
 
     card_text, _ = message.replies[0].last_edit
-    assert "Bia" in card_text
+    assert "Fulana" in card_text
     assert handlers.EDITING_KEY not in context.user_data
-    assert "na verdade é da Bia" in provider.calls[-1][1]
+    assert "na verdade é da Fulana" in provider.calls[-1][1]
     assert provider.image_calls == []  # the photo itself is never re-extracted
 
 

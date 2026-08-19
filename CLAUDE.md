@@ -1,5 +1,12 @@
 # CLAUDE.md
 
+## Linear
+
+Linear project reference for this repository: `telegram-bot-43f68fcbee65`
+(https://linear.app/vncrodrigues13/project/telegram-bot-43f68fcbee65). Use this
+slug when looking up or creating Linear issues, projects, and documents for this
+work.
+
 ## Running the project
 
 Setup (`.env`, `credentials.json`, `token.json`) is documented in README.md.

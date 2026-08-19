@@ -19,12 +19,12 @@ async def test_pending_round_trip(store: Store, invite: ExtractedEvent) -> None:
 async def test_pending_update_and_delete(store: Store, invite: ExtractedEvent) -> None:
     pending_id = await store.add_pending(1, "texto", None, invite)
 
-    corrected = invite.model_copy(update={"person": "Bia"})
+    corrected = invite.model_copy(update={"person": "Fulana"})
     await store.update_pending(pending_id, extraction=corrected, card_message_id=99)
 
     pending = await store.get_pending(pending_id)
     assert pending is not None
-    assert pending.extraction.person == "Bia"
+    assert pending.extraction.person == "Fulana"
     assert pending.card_message_id == 99
 
     await store.delete_pending(pending_id)

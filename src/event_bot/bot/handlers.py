@@ -363,7 +363,7 @@ async def on_edit(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if context.user_data is not None:
         context.user_data[EDITING_KEY] = pending_id
     await query.message.reply_text(
-        "✏️ O que devo corrigir? Ex.: “é dia 22/03”, “é o casamento da Bia”, "
+        "✏️ O que devo corrigir? Ex.: “é dia 22/03”, “é o casamento da Fulana”, "
         "“o endereço é Rua X, 100”."
     )
 

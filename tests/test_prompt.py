@@ -83,13 +83,13 @@ def test_correction_prompt_carries_original_previous_and_correction() -> None:
     prompt = build_correction_prompt(
         "niver da Ana dia 12/03 às 20h",
         previous,
-        "na verdade é da Bia",
+        "na verdade é da Fulana",
         FROZEN_NOW,
         "America/Sao_Paulo",
     )
     assert "niver da Ana dia 12/03" in prompt  # the original message
     assert '"person": "Ana"' in prompt  # the previous extraction, as JSON
-    assert "na verdade é da Bia" in prompt  # the correction
+    assert "na verdade é da Fulana" in prompt  # the correction
     assert "CORREÇÃO DO USUÁRIO>>>" in prompt  # delimited too
     assert "2026-08-05T14:32:00" in prompt  # still anchored to `now`
 
@@ -139,10 +139,10 @@ def test_user_prompt_image_caption_block_present_only_with_a_caption() -> None:
 def test_correction_prompt_without_source_has_no_message_block() -> None:
     previous = ExtractedEvent(is_event_invite=True, person="Ana")
     prompt = build_correction_prompt(
-        None, previous, "na verdade é da Bia", FROZEN_NOW, "America/Sao_Paulo"
+        None, previous, "na verdade é da Fulana", FROZEN_NOW, "America/Sao_Paulo"
     )
     assert "<<<MENSAGEM" not in prompt
-    assert "na verdade é da Bia" in prompt
+    assert "na verdade é da Fulana" in prompt
     assert '"person": "Ana"' in prompt
     assert "2026-08-05T14:32:00" in prompt
 
