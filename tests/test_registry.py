@@ -10,8 +10,8 @@ from types import ModuleType
 
 import pytest
 
-from birthday_bot.config import Settings
-from birthday_bot.llm.registry import build_provider
+from event_bot.config import Settings
+from event_bot.llm.registry import build_provider
 
 _HAS_ANTHROPIC = importlib.util.find_spec("anthropic") is not None
 
@@ -36,13 +36,13 @@ def test_an_unrelated_missing_module_keeps_its_traceback(
     monkeypatch: pytest.MonkeyPatch, settings: Settings
 ) -> None:
     """A broken install is a bug, not a config mistake — don't dress it up."""
-    broken = ModuleType("birthday_bot.llm.gemini")
+    broken = ModuleType("event_bot.llm.gemini")
 
     def __getattr__(name: str) -> object:
         raise ModuleNotFoundError("No module named 'httpx'", name="httpx")
 
     broken.__getattr__ = __getattr__  # type: ignore[attr-defined]
-    monkeypatch.setitem(sys.modules, "birthday_bot.llm.gemini", broken)
+    monkeypatch.setitem(sys.modules, "event_bot.llm.gemini", broken)
 
     with pytest.raises(ModuleNotFoundError, match="httpx"):
         build_provider(settings)

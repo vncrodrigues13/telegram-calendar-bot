@@ -54,7 +54,7 @@ pyproject.toml            # uv-managed, requires-python = ">=3.13"
 .gitignore                # .env, token.json, credentials.json, *.db
 README.md                 # setup: BotFather → Gemini key → Google OAuth
 specs/plans/kick-off/     # this document
-src/birthday_bot/
+src/event_bot/
     config.py             # pydantic-settings, reads .env
     models.py             # ExtractedEvent
     store.py              # sqlite: pending approvals + dedupe ledger
@@ -237,18 +237,18 @@ uv sync && uv run python -c "import telegram, google.genai, googleapiclient; pri
 
 **2. Extraction alone — no Telegram, no Calendar.** This is the fast loop for tuning the prompt:
 ```bash
-uv run python -m birthday_bot.tools.try_extract \
+uv run python -m event_bot.tools.try_extract \
   "Galera, sábado tem niver da Ana! 15h na Rua das Flores 200, Pinheiros. Traz bebida 🎂"
 ```
 Expect `person: "Ana"`, `place` with the street, `start` on the *next* Saturday at 15:00, `is_birthday_invite: true`. Also try a non-invite ("bom dia pessoal") → `is_birthday_invite: false`, and a numeric date ("dia 12/03 às 20h") → March 12, not December 3.
 
 **3. Provider swap — deferred.** Only Gemini is configured, so there is nothing to compare against yet:
 ```bash
-LLM_PROVIDER=gemini uv run python -m birthday_bot.tools.try_extract "$MSG"
+LLM_PROVIDER=gemini uv run python -m event_bot.tools.try_extract "$MSG"
 ```
 What *is* verifiable today is that the seam refuses early when a key is missing, in `registry.py` rather than deep inside an SDK:
 ```bash
-LLM_PROVIDER=claude uv run python -m birthday_bot.tools.try_extract "$MSG"
+LLM_PROVIDER=claude uv run python -m event_bot.tools.try_extract "$MSG"
 # → ValueError: LLM_PROVIDER=claude exige ANTHROPIC_API_KEY, que não está definido no .env
 ```
 This currently surfaces as an uncaught traceback. The message is right and the failure is early, but `try_extract` could catch `ValueError` and print it plainly — a rough edge, not a defect.
@@ -259,12 +259,12 @@ Note this step relies on environment variables overriding `.env` — pydantic-se
 
 **4. Google Calendar auth + write.** Opens a browser once, writes `token.json`, then creates and immediately deletes a test event:
 ```bash
-uv run python -m birthday_bot.tools.gcal_check
+uv run python -m event_bot.tools.gcal_check
 ```
 
 **5. Unit tests** — `uv run pytest`. Covers relative-date resolution and DD/MM ordering (frozen `now`), dedupe fingerprinting, and the full handler flow against a `FakeProvider` returning a canned `ExtractedEvent` (no network, no API keys).
 
-**6. End to end.** `uv run python -m birthday_bot.main`, then forward a real invite from Telegram. Expect the card within a few seconds, tap ✅, confirm the event appears in Google Calendar with the original message in the description. Forward the same message again to confirm dedupe fires.
+**6. End to end.** `uv run python -m event_bot.main`, then forward a real invite from Telegram. Expect the card within a few seconds, tap ✅, confirm the event appears in Google Calendar with the original message in the description. Forward the same message again to confirm dedupe fires.
 
 ---
 

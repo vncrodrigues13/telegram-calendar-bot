@@ -10,10 +10,10 @@ from types import ModuleType
 
 import pytest
 
-from birthday_bot import tools
-from birthday_bot.config import Settings
-from birthday_bot.models import ExtractedEvent
-from birthday_bot.tools import try_extract as tool
+from event_bot import tools
+from event_bot.config import Settings
+from event_bot.models import ExtractedEvent
+from event_bot.tools import try_extract as tool
 from tests.conftest import FakeProvider
 
 
@@ -93,7 +93,7 @@ async def test_extraction_failure_exits_one(
     capsys: pytest.CaptureFixture[str],
     settings: Settings,
 ) -> None:
-    from birthday_bot.llm.base import ExtractionError
+    from event_bot.llm.base import ExtractionError
 
     class Failing:
         async def extract_json(self, **_: object) -> ExtractedEvent:
