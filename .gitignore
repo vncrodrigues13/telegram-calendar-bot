@@ -6,6 +6,14 @@ token.json
 # Local state
 *.db
 
+# Machine-local Claude Code config and notes
+CLAUDE.local.md
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+
+# macOS
+.DS_Store
+
 # Python
 __pycache__/
 *.py[cod]

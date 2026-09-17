@@ -23,26 +23,110 @@ Telegram (you forward) → bot/handlers.py
                      store.py (sqlite: pending approvals)
 ```
 
-## Setup
+## Requirements
 
-1. **Bot token** — [@BotFather](https://t.me/BotFather) → `/newbot` →
-   `TELEGRAM_BOT_TOKEN`.
-2. **Your user ID** — [@userinfobot](https://t.me/userinfobot) →
-   `OWNER_TELEGRAM_ID`. The bot ignores everyone else.
-3. **Gemini key** — [aistudio.google.com](https://aistudio.google.com) →
-   `GEMINI_API_KEY`.
-4. **Google Calendar OAuth** — in the
-   [Cloud Console](https://console.cloud.google.com): new project → enable the
-   **Google Calendar API** → OAuth consent screen (External, add your own
-   address under **Test users**) → Credentials → OAuth client ID → **Desktop
-   app** → download the JSON as `credentials.json` in the project root. The bot
-   reads it directly and writes `token.json` on first login; both are
-   gitignored.
+Four things from the outside world, plus a Python toolchain. Budget about
+15 minutes end to end — the Google Cloud part is the slow one, everything else
+is copy-paste.
+
+| # | What you need | Where it comes from | Lands in |
+|---|---|---|---|
+| 0 | Python **3.13+** and [uv](https://docs.astral.sh/uv/) | your machine | — |
+| 1 | Telegram **bot token** | @BotFather | `.env` → `TELEGRAM_BOT_TOKEN` |
+| 2 | Your **Telegram user ID** (a number) | @userinfobot | `.env` → `OWNER_TELEGRAM_ID` |
+| 3 | **Gemini API key** | Google AI Studio | `.env` → `GEMINI_API_KEY` |
+| 4 | **`credentials.json`** | Google Cloud Console | project root |
+
+What you *don't* need: a server, a domain, a webhook, an always-on machine, or
+a Google Calendar API key (there is no such thing here — see step 4). The bot
+long-polls Telegram from your laptop; close the terminal and it simply stops.
+
+### 0. Python 3.13+ and uv
+
+[uv](https://docs.astral.sh/uv/) manages both the Python version and the
+dependencies, so it's the only thing you install by hand:
 
 ```bash
-cp .env.example .env && $EDITOR .env
-uv sync
+curl -LsSf https://astral.sh/uv/install.sh | sh   # macOS / Linux
+uv sync                                            # installs Python 3.13 + deps
 ```
+
+Verify with `uv run pytest`. The suite is fully offline — it needs no keys, no
+network, and no Google account, so a green run here confirms the toolchain
+before you go collect any credentials.
+
+### 1. Telegram bot token
+
+Open [@BotFather](https://t.me/BotFather) in Telegram and send `/newbot`. It
+asks for a display name (anything) and a username (must end in `bot`, e.g.
+`meu_calendario_bot`). It replies with a token shaped like
+`123456789:AAE-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`.
+
+Copy the whole thing, colon included, into `TELEGRAM_BOT_TOKEN`. Anyone holding
+this token controls the bot, so it stays in `.env` — which is gitignored.
+
+### 2. Your Telegram user ID
+
+Message [@userinfobot](https://t.me/userinfobot) and it answers with your
+numeric ID (something like `123456789` — a number, *not* your `@username`).
+Put it in `OWNER_TELEGRAM_ID`.
+
+This is the bot's entire access control: messages from any other ID are ignored
+without a reply. Get it wrong and the bot will simply never answer you.
+
+### 3. Gemini API key
+
+Go to [aistudio.google.com](https://aistudio.google.com) → **Get API key** →
+create one in a new or existing project. Paste it into `GEMINI_API_KEY`.
+
+The free tier is generous and one forwarded invite is a single small request,
+so personal use typically costs nothing. Only this key is required by default —
+`claude` and `openai` adapters ship in `llm/`, but using one means setting
+`LLM_PROVIDER`, its own key (`ANTHROPIC_API_KEY` / `OPENAI_API_KEY`), and
+installing the SDK (`uv add anthropic` / `uv add openai`).
+
+### 4. Google Calendar access (`credentials.json`)
+
+This is **not** an API key. Writing to *your* calendar requires *your* consent,
+so Google uses OAuth: you register an app, then grant it access in a browser.
+
+In the [Cloud Console](https://console.cloud.google.com):
+
+1. Create a project (or reuse one) — top-left project picker → **New project**.
+2. **APIs & Services → Library** → search *Google Calendar API* → **Enable**.
+3. **OAuth consent screen** → User type **External** → fill in app name and
+   your email → under **Test users**, add your own Google address.
+   ↳ Skipping this is the #1 cause of *"Access blocked: app has not completed
+   verification"* later.
+4. **Credentials → Create credentials → OAuth client ID** → Application type
+   **Desktop app** → Create → **Download JSON**.
+5. Rename the downloaded file to `credentials.json` and drop it in the project
+   root, next to `pyproject.toml`.
+
+The first time the bot needs the calendar it opens your browser once, you
+approve, and it saves the result to `token.json` — refreshed automatically from
+then on, so you never see that screen again. Both files are gitignored and stay
+on your machine.
+
+Check it end to end before running the bot:
+
+```bash
+uv run python -m event_bot.tools.gcal_check   # creates and deletes a test event
+```
+
+The bot only ever asks for `calendar.events` — permission to create events,
+not to read your existing calendar.
+
+### Putting it together
+
+```bash
+cp .env.example .env && $EDITOR .env   # paste steps 1-3 here
+uv sync
+uv run python -m event_bot.tools.gcal_check   # step 4, one-time browser login
+```
+
+`.env.example` documents every optional setting too — timezone, calendar ID,
+reminder offsets, default event length.
 
 ## Run
 
@@ -52,7 +136,8 @@ uv run python -m event_bot.main
 
 Then forward an invite to the bot.
 
-Two CLIs help before that, in order:
+Smaller CLIs exercise one piece at a time — useful for tuning the prompt, or
+for narrowing down which part broke:
 
 ```bash
 # extraction only — no Telegram, no Calendar (fast loop for prompt tuning)
