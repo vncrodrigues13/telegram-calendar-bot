@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Telegram → Google Calendar Event Bot</title>
+    <meta
+      name="description"
+      content="A personal Telegram bot that turns forwarded event invites into Google Calendar events."
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Telegram → Google Calendar Event Bot</h1>
+      <p class="lede">
+        A personal, single-user Telegram bot that turns a forwarded event invite
+        into a Google Calendar event — after you approve it.
+      </p>
+
+      <h2>What it does</h2>
+      <p>
+        You forward an invite to the bot on Telegram — a birthday message, a
+        wedding invitation, a race registration, a screenshot of a flyer. The
+        bot reads it, extracts the <strong>title, type, person, place and
+        time</strong>, and replies with what it found plus approve, correct and
+        discard buttons.
+      </p>
+      <p>
+        Nothing reaches your calendar until you tap approve. When you do, the
+        bot creates a single event on your own Google Calendar, keeping the
+        original message in the event description.
+      </p>
+
+      <h2>Who it is for</h2>
+      <p>
+        This is a personal-use project, run by its owner on their own machine
+        for their own calendar. It is not a hosted service, has no sign-up, and
+        accepts messages from exactly one configured Telegram account — messages
+        from any other account are ignored without a reply.
+      </p>
+
+      <h2>Google Calendar access</h2>
+      <p>
+        The bot requests one narrow OAuth scope,
+        <code>https://www.googleapis.com/auth/calendar.events</code>, which
+        allows it to create calendar events. It is used for nothing else. The
+        bot does not read your existing calendar, does not share your data, and
+        does not use it for advertising or to train any model.
+      </p>
+      <p>
+        See the <a href="privacy.html">Privacy Policy</a> for the full detail,
+        including what is stored and how to revoke access at any time.
+      </p>
+
+      <h2>How it is built</h2>
+      <p>
+        A language model does one narrow job: pulling structured fields out of
+        unstructured text. Approval and event creation are ordinary
+        deterministic code. The project is written in Python and runs locally
+        via long polling — no server, no webhook, no always-on machine.
+      </p>
+
+      <footer>
+        <p>
+          <a href="privacy.html">Privacy Policy</a> ·
+          <a href="mailto:vncrodrigues13@gmail.com">Contact</a>
+        </p>
+      </footer>
+    </main>
+  </body>
+</html>
