@@ -1,0 +1,153 @@
+# Kubernetes deployment for the Telegram → Google Calendar bot.
+#
+# The bot long-polls Telegram: no inbound traffic, so no Service/Ingress.
+# It must run as exactly ONE replica — two pollers on the same token make
+# Telegram answer 409 Conflict to both.
+#
+# Secrets are NOT in this file. Create them from your local files first:
+#
+#   kubectl create namespace event-bot
+#   kubectl -n event-bot create secret generic event-bot-env \
+#     --from-literal=TELEGRAM_BOT_TOKEN='123456:ABC...' \
+#     --from-literal=GEMINI_API_KEY='...'
+#   kubectl -n event-bot create secret generic event-bot-google \
+#     --from-file=token.json=./token.json
+#
+# token.json comes from running `uv run python -m event_bot.tools.gcal_check`
+# on your machine (the OAuth browser flow cannot run in a pod). It already
+# carries the refresh token, so credentials.json is deliberately not shipped.
+#
+# Then:
+#
+#   kubectl apply -f deploy/k8s.yaml
+#   kubectl -n event-bot logs -f deploy/event-bot
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: event-bot
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: event-bot-config
+  namespace: event-bot
+data:
+  OWNER_TELEGRAM_ID: "123456789"  # <- your ID from @userinfobot
+  LLM_PROVIDER: gemini
+  TIMEZONE: America/Sao_Paulo
+  CALENDAR_ID: primary
+  DEFAULT_EVENT_HOURS: "3"
+  REMINDER_MINUTES: "[1440,120]"
+---
+# Holds bot.db (pending approvals) and the live token.json, which the bot
+# rewrites on every OAuth refresh — so it can't live in a read-only Secret.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: event-bot-data
+  namespace: event-bot
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: event-bot
+  namespace: event-bot
+  labels:
+    app: event-bot
+spec:
+  replicas: 1  # never scale: see header
+  strategy:
+    type: Recreate  # old pod stops polling before the new one starts
+  selector:
+    matchLabels:
+      app: event-bot
+  template:
+    metadata:
+      labels:
+        app: event-bot
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        # Seed token.json into the volume only on first boot. Afterwards the
+        # copy on the PVC is authoritative (the bot refreshes it in place).
+        # To force a re-seed after a new OAuth grant, delete /data/token.json.
+        - name: seed-token
+          image: busybox:1.37
+          command:
+            - sh
+            - -c
+            - |
+              if [ ! -f /data/token.json ]; then
+                cp /seed/token.json /data/token.json
+                chmod 600 /data/token.json
+                echo "token.json seeded"
+              else
+                echo "token.json already present, keeping it"
+              fi
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: google-seed
+              mountPath: /seed
+              readOnly: true
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+      containers:
+        - name: bot
+          image: ghcr.io/vncrodrigues13/telegram-calendar-bot:latest
+          imagePullPolicy: Always
+          envFrom:
+            - configMapRef:
+                name: event-bot-config
+            - secretRef:
+                name: event-bot-env
+          env:
+            - name: DB_PATH
+              value: /data/bot.db
+            - name: TOKEN_PATH
+              value: /data/token.json
+            - name: CREDENTIALS_PATH
+              value: /data/credentials.json  # intentionally absent: fail fast instead of hanging on a browser
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 256Mi
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: tmp
+              mountPath: /tmp
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: event-bot-data
+        - name: google-seed
+          secret:
+            secretName: event-bot-google
+            defaultMode: 0440  # group-readable: fsGroup 1000 lets the non-root init container read it
+        - name: tmp
+          emptyDir: {}

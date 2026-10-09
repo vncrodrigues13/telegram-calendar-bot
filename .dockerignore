@@ -1,0 +1,22 @@
+# Secrets and local state — must never land in an image layer
+.env
+credentials.json
+token.json
+*.db
+
+# Build noise
+.git
+.venv
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+.DS_Store
+.claude/
+CLAUDE.local.md
+
+# Not needed at runtime
+specs/
+tests/
+docs/
+deploy/
